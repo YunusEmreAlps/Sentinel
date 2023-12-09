@@ -23,4 +23,5 @@ type Log struct {
 	Issuer             string    `json:"issuer" gorm:"issuer"`
 	IsExpired          bool      `json:"is_expired" gorm:"is_expired"`
 	Message            string    `json:"message" gorm:"message"`
+	Status             bool      `json:"status" gorm:"status"`
 }

@@ -12,6 +12,8 @@ import (
 
 	"sentinel/logger"
 	"sentinel/models"
+
+	"github.com/xuri/excelize/v2"
 )
 
 func TimeFormatter(t time.Time) string {
@@ -171,5 +173,107 @@ func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
 		Issuer:             cert.Issuer.CommonName,
 		IsExpired:          cert.NotAfter.Before(cert.NotBefore),
 		Message:            fmt.Sprintf("Certificate will expire in %d days.", daysUntilExpiration),
+		Status:             isExpired,
 	}
+}
+
+// Excel File Creation Function
+func SetChangesToExcel(changes []models.Log) *excelize.File {
+
+	// Create a new spreadsheet
+	f := excelize.NewFile()
+	defer func() {
+		if err := f.Close(); err != nil {
+			logger.CLogger.Error("ERROR: ", err)
+		}
+	}()
+
+	// Expire Style
+	styleExpire, errExpire := f.NewStyle(&excelize.Style{
+		Fill: excelize.Fill{
+			Type:    "pattern",
+			Color:   []string{"#FF0000"},
+			Pattern: 1,
+		},
+	})
+	if errExpire != nil {
+		logger.CLogger.Error("ERROR: ", errExpire)
+		return nil
+	}
+
+	// Not Expire Style
+	styleNotExpire, errNotExpire := f.NewStyle(&excelize.Style{
+		Fill: excelize.Fill{
+			Type:    "pattern",
+			Color:   []string{"#00FF00"},
+			Pattern: 1,
+		},
+	})
+	if errNotExpire != nil {
+		logger.CLogger.Error("ERROR: ", errNotExpire)
+		return nil
+	}
+
+	// Change the name of the worksheet.
+	f.SetSheetName("Sheet1", "Logs")
+
+	f.SetCellValue("Logs", "A1", "Version")
+	f.SetCellValue("Logs", "B1", "Serial Number")
+	f.SetCellValue("Logs", "C1", "Subject")
+	f.SetCellValue("Logs", "D1", "Issuer Subject")
+	f.SetCellValue("Logs", "E1", "Domain")
+	f.SetCellValue("Logs", "F1", "Port")
+	f.SetCellValue("Logs", "G1", "Common Name")
+	f.SetCellValue("Logs", "H1", "Organization")
+	f.SetCellValue("Logs", "I1", "Issued On")
+	f.SetCellValue("Logs", "J1", "Expires On")
+	f.SetCellValue("Logs", "K1", "Certificate Data")
+	f.SetCellValue("Logs", "L1", "Signature Algorithm")
+	f.SetCellValue("Logs", "M1", "Subject Key ID")
+	f.SetCellValue("Logs", "N1", "Authority Key ID")
+	f.SetCellValue("Logs", "O1", "Is CA")
+	f.SetCellValue("Logs", "P1", "Issuer")
+	f.SetCellValue("Logs", "Q1", "Is Expired")
+	f.SetCellValue("Logs", "R1", "Message")
+
+	// Set value of a cell.
+	index := 2
+	for _, change := range changes {
+		f.SetCellValue("Logs", "A"+strconv.Itoa(index), change.Version)
+		f.SetCellValue("Logs", "B"+strconv.Itoa(index), change.SerialNumber)
+		f.SetCellValue("Logs", "C"+strconv.Itoa(index), change.Subject)
+		f.SetCellValue("Logs", "D"+strconv.Itoa(index), change.IssuerSubject)
+		f.SetCellValue("Logs", "E"+strconv.Itoa(index), change.Domain)
+		f.SetCellValue("Logs", "F"+strconv.Itoa(index), change.Port)
+		f.SetCellValue("Logs", "G"+strconv.Itoa(index), change.CommonName)
+		f.SetCellValue("Logs", "H"+strconv.Itoa(index), change.Organization)
+		f.SetCellValue("Logs", "I"+strconv.Itoa(index), change.IssuedOn)
+		f.SetCellValue("Logs", "J"+strconv.Itoa(index), change.ExpiresOn)
+		f.SetCellValue("Logs", "K"+strconv.Itoa(index), change.CertificateData)
+		f.SetCellValue("Logs", "L"+strconv.Itoa(index), change.SignatureAlgorithm)
+		f.SetCellValue("Logs", "M"+strconv.Itoa(index), change.SubjectKeyID)
+		f.SetCellValue("Logs", "N"+strconv.Itoa(index), change.AuthorityKeyID)
+		f.SetCellValue("Logs", "O"+strconv.Itoa(index), change.IsCA)
+		f.SetCellValue("Logs", "P"+strconv.Itoa(index), change.Issuer)
+		f.SetCellValue("Logs", "Q"+strconv.Itoa(index), change.IsExpired)
+		f.SetCellValue("Logs", "R"+strconv.Itoa(index), change.Message)
+		if change.Status {
+			f.SetCellStyle("Logs", "A"+strconv.Itoa(index), "R"+strconv.Itoa(index), styleExpire)
+		} else {
+			f.SetCellStyle("Logs", "A"+strconv.Itoa(index), "R"+strconv.Itoa(index), styleNotExpire)
+		}
+		index++
+	}
+
+	// Set active sheet of the workbook.
+	f.SetActiveSheet(index)
+
+	// Save spreadsheet to the db
+	if err := f.SaveAs("Logs.xlsx"); err != nil {
+		logger.CLogger.Error("ERROR: ", err)
+		return nil
+	}
+
+	// return file for attachment
+	return f
 }

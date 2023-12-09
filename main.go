@@ -75,7 +75,8 @@ func main() {
 				for _, v := range filteredChanges {
 					logger.CLogger.Tracef("TRACE: %s:%d - %s", v.Domain, v.Port, v.Message)
 				}
-				sendMailWithAttachment(filteredChanges, nil)
+				f := helpers.SetChangesToExcel(filteredChanges)
+				sendMailWithAttachment(filteredChanges, f)
 			}
 		} else {
 			logger.CLogger.Info("INFO: No changes in the last minute.")
