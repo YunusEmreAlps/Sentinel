@@ -96,6 +96,8 @@ func UrlToOptions(url string) (string, string, string, string, string, string) {
 
 // Check Domain Certificate
 func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
+	status := 0
+
 	// false: certificate will not expire in 30 days
 	// true: certificate will expire in 30 days
 	logger.CLogger.Info("INFO: Checking certificate for " + domain)
@@ -152,6 +154,9 @@ func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
 	tempPort, _ := strconv.Atoi(strings.Split(domain, ":")[1])
 	daysUntilExpiration := int(time.Until(cert.NotAfter).Hours() / 24) // Optimized line
 	isExpired := daysUntilExpiration < day
+	if isExpired {
+		status = 1
+	}
 
 	// if certifcate time gonna expire in 30 days add to logs
 	return isExpired, &models.Log{
@@ -173,7 +178,7 @@ func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
 		Issuer:             cert.Issuer.CommonName,
 		IsExpired:          cert.NotAfter.Before(cert.NotBefore),
 		Message:            fmt.Sprintf("Certificate will expire in %d days.", daysUntilExpiration),
-		Status:             isExpired,
+		Status:             status,
 	}
 }
 
@@ -211,6 +216,19 @@ func SetChangesToExcel(changes []models.Log) *excelize.File {
 	})
 	if errNotExpire != nil {
 		logger.CLogger.Error("ERROR: ", errNotExpire)
+		return nil
+	}
+
+	// Time Out Style
+	styleTimeOut, errTimeOut := f.NewStyle(&excelize.Style{
+		Fill: excelize.Fill{
+			Type:    "pattern",
+			Color:   []string{"#FFFF00"},
+			Pattern: 1,
+		},
+	})
+	if errTimeOut != nil {
+		logger.CLogger.Error("ERROR: ", errTimeOut)
 		return nil
 	}
 
@@ -257,10 +275,12 @@ func SetChangesToExcel(changes []models.Log) *excelize.File {
 		f.SetCellValue("Logs", "P"+strconv.Itoa(index), change.Issuer)
 		f.SetCellValue("Logs", "Q"+strconv.Itoa(index), change.IsExpired)
 		f.SetCellValue("Logs", "R"+strconv.Itoa(index), change.Message)
-		if change.Status {
+		if change.Status == 1 {
 			f.SetCellStyle("Logs", "A"+strconv.Itoa(index), "R"+strconv.Itoa(index), styleExpire)
-		} else {
+		} else if change.Status == 0 {
 			f.SetCellStyle("Logs", "A"+strconv.Itoa(index), "R"+strconv.Itoa(index), styleNotExpire)
+		} else {
+			f.SetCellStyle("Logs", "A"+strconv.Itoa(index), "R"+strconv.Itoa(index), styleTimeOut)
 		}
 		index++
 	}

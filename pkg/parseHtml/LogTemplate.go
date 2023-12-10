@@ -33,7 +33,7 @@ func LogTemplate(content *models.Mail, logs []models.Log, l string) string {
 	// Multipart MIME Header
 	if l == "smtp" {
 		mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-		templateBuffer.Write([]byte(fmt.Sprintf("Subject: %s\n%s\n\n", "Kodeks Error Logs", mimeHeaders)))
+		templateBuffer.Write([]byte(fmt.Sprintf("Subject: %s\n%s\n\n", "Sentinel Error Logs", mimeHeaders)))
 	}
 
 	// Execute the template
