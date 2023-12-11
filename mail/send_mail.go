@@ -2,6 +2,7 @@ package mail
 
 import (
 	"crypto/tls"
+	"io"
 	"strconv"
 
 	"net/mail"
@@ -83,6 +84,14 @@ func SendMailWithGomail(mailConfig *models.MailConfig, content *models.Mail, log
 	m.SetHeader("Subject", content.Subject)
 	m.SetBody("text/html", parseHtml.LogTemplate(content, logs, "goMail"))
 
+	// Add attachment
+	if attach != nil {
+		m.Attach("../Logs.xlsx", gomail.SetCopyFunc(func(w io.Writer) error {
+			_, err := attach.WriteTo(w)
+			return err
+		}))
+	}
+
 	port, err := strconv.Atoi(mailConfig.Port)
 	if err != nil {
 		return err
@@ -91,12 +100,12 @@ func SendMailWithGomail(mailConfig *models.MailConfig, content *models.Mail, log
 	conn := gomail.NewDialer(mailConfig.Host, port, mailConfig.Username, mailConfig.Password)
 	conn.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
-	// ping, err := conn.Dial()
-	// if err != nil {
-	// 	fmt.Println("Sunucuya ping atılamadı ", err)
-	// 	return err
-	// }
-	// defer ping.Close()
+	ping, err := conn.Dial()
+	if err != nil {
+		logger.CLogger.Error("ERROR: ", err)
+		return err
+	}
+	defer ping.Close()
 
 	if err := conn.DialAndSend(m); err != nil {
 		return err

@@ -42,7 +42,7 @@ func LogTemplate(content *models.Mail, logs []models.Log, l string) string {
 		CurrentTime string
 		Logs        []models.Log
 	}{
-		AppName:     config.C.App.TargetApp,
+		AppName:     config.C.App.Name,
 		CurrentTime: time.Now().Format("15:04:05 02.01.2006"),
 		Logs:        logs,
 	})

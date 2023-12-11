@@ -152,6 +152,7 @@ func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
 	// Certification Info is here
 	cert := tlsConn.ConnectionState().PeerCertificates[0]
 	tempPort, _ := strconv.Atoi(strings.Split(domain, ":")[1])
+	tempOrganization := cert.Subject.Organization
 	daysUntilExpiration := int(time.Until(cert.NotAfter).Hours() / 24) // Optimized line
 	isExpired := daysUntilExpiration < day
 	if isExpired {
@@ -167,7 +168,7 @@ func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
 		Domain:             strings.Split(domain, ":")[0],
 		Port:               tempPort,
 		CommonName:         cert.Subject.CommonName,
-		Organization:       cert.Subject.Organization[0],
+		Organization:       ArrayToString(tempOrganization),
 		IssuedOn:           cert.NotBefore,
 		ExpiresOn:          cert.NotAfter,
 		CertificateData:    string(cert.Raw),
