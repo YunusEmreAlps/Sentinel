@@ -67,13 +67,10 @@ Run the following command to execute the Go program:
 
 ### `config`
 
-Configuration. First, `config.yml` is read, then environment variables overwrite the yaml config if they match.
-The config structure is in the `config.go`.
-The `env-required: true` tag obliges you to specify a value (either in yaml, or in environment variables).
-
-Reading the config from yaml contradicts the ideology of 12 factors, but in practice, it is more convenient than
-reading the entire config from ENV.
-It is assumed that default values are in yaml, and security-sensitive variables are defined in ENV.
+- Configuration. First, `config.yml` is read, then environment variables overwrite the yaml config if they match.
+- The config structure is in the `config.go`.
+- Reading the config from yaml contradicts the ideology of 12 factors, but in practice, it is more convenient than reading the entire config from ENV.
+- It is assumed that default values are in yaml, and security-sensitive variables are defined in ENV.
 
 ### `main.go`
 
@@ -90,7 +87,7 @@ Core of this project (DB Connection, Excelize, Filtering and more...).
 
 ## Contributing
 
-We welcome contributions to Orion! To contribute to the project, please follow these steps:
+We welcome contributions to Sentinel! To contribute to the project, please follow these steps:
 
 - Fork the repository.
 - Create a new branch for your feature or bug fix.

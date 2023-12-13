@@ -15,6 +15,9 @@ type config struct {
 		Version   string `mapstructure:"version"`
 		Name      string `mapstructure:"name"`
 		TargetApp string `mapstructure:"target_app"`
+		ToUsers   string `mapstructure:"to_users"`
+		CcUsers   string `mapstructure:"cc_users"`
+		ExpireDay int    `mapstructure:"expire_day"`
 	} `mapstructure:"app"`
 
 	DB struct {

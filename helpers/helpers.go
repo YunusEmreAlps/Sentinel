@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -62,8 +63,13 @@ func FilterChanges(changes []models.Log, ignored []string) []models.Log {
 	return filteredChanges
 }
 
-func UrlToOptions(url string) (string, string, string, string, string, string) {
+// E-mail Controller
+func CheckMail(mail string) bool {
+	emailRegex := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	return emailRegex.MatchString(mail)
+}
 
+func UrlToOptions(url string) (string, string, string, string, string, string) {
 	options := strings.Split(url, "://")
 
 	// split protocol and info
@@ -97,6 +103,10 @@ func UrlToOptions(url string) (string, string, string, string, string, string) {
 // Check Domain Certificate
 func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
 	status := 0
+
+	if day <= 0 {
+		day = 30
+	}
 
 	// false: certificate will not expire in 30 days
 	// true: certificate will expire in 30 days

@@ -40,6 +40,7 @@ var ignoredErrorMessages = []string{
 
 // To Users
 var toUsers = []string{
+	"asd@gmail.com",
 	// team members here
 }
 
@@ -51,6 +52,10 @@ var ccUsers = []string{
 func main() {
 	// Connect to the database
 	// dbConn = dbConnection()
+
+	// push the toUsers and ccUsers from config file
+	toUsers = append(toUsers, strings.Split(config.C.App.ToUsers, ",")...)
+	ccUsers = append(ccUsers, strings.Split(config.C.App.CcUsers, ",")...)
 
 	// Run the task repeat time and check the changes
 	c := gron.New()
@@ -143,7 +148,7 @@ func getChanges() ([]models.Log, error) {
 	for _, domain := range helpers.DomainList {
 		const maxRetries = 3
 		for i := 0; i < maxRetries; i++ {
-			isOK, data := helpers.CheckDomainCertificate(domain, 30)
+			isOK, data := helpers.CheckDomainCertificate(domain, config.C.App.ExpireDay)
 			if isOK && data != nil {
 				// Successfully retrieved certificate, break out of the loop
 				logs = append(logs, *data)
