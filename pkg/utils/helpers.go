@@ -1,29 +1,28 @@
-package helpers
+package utils
 
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"net"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"sentinel/logger"
-	"sentinel/models"
+	"sentinel/config"
+	"sentinel/internal/models"
+	"sentinel/pkg/logger"
+	"sentinel/pkg/mail"
 
 	"github.com/xuri/excelize/v2"
 )
 
-func TimeFormatter(t time.Time) string {
-	// That formats the given time to RFC3339 format (2023-01-16T13:50:56.910Z)
-	return t.UTC().Format(time.RFC3339)
-}
-
+// This function converts a slice of strings to a single string with comma separated values
 func ArrayToString(array []string) string {
-	// That converts the given array to string
 	var str string
 	for _, v := range array {
 		str += v + ","
@@ -31,9 +30,8 @@ func ArrayToString(array []string) string {
 	return str
 }
 
-// Find key value in string json
+// FindKeyValueInJson finds the value of a given key in a JSON string.
 func FindKeyValueInJson(json string, key string) string {
-	// That finds the given key value in string json
 	parameterList := strings.Split(json, ",")
 	for _, v := range parameterList {
 		// if value contains "username" string, split it by equal sign and get the second value
@@ -63,13 +61,8 @@ func FilterChanges(changes []models.Log, ignored []string) []models.Log {
 	return filteredChanges
 }
 
-// E-mail Controller
-func CheckMail(mail string) bool {
-	emailRegex := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
-	return emailRegex.MatchString(mail)
-}
-
 func UrlToOptions(url string) (string, string, string, string, string, string) {
+
 	options := strings.Split(url, "://")
 
 	// split protocol and info
@@ -113,7 +106,7 @@ func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
 	logger.CLogger.Info("INFO: Checking certificate for " + domain)
 
 	// TCP connection to domain
-	conn, err := net.DialTimeout("tcp", domain, 10*time.Second)
+	conn, err := net.Dial("tcp", domain)
 	if err != nil {
 		if netErr, ok := err.(*net.OpError); ok && netErr.Op == "dial" {
 			// DNS resolution error
@@ -162,7 +155,7 @@ func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
 	// Certification Info is here
 	cert := tlsConn.ConnectionState().PeerCertificates[0]
 	tempPort, _ := strconv.Atoi(strings.Split(domain, ":")[1])
-	tempOrganization := cert.Subject.Organization
+	tempOrganization := cert.Subject.Organization                      // Optimized line
 	daysUntilExpiration := int(time.Until(cert.NotAfter).Hours() / 24) // Optimized line
 	isExpired := daysUntilExpiration < day
 	if isExpired {
@@ -181,16 +174,33 @@ func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
 		Organization:       ArrayToString(tempOrganization),
 		IssuedOn:           cert.NotBefore,
 		ExpiresOn:          cert.NotAfter,
-		CertificateData:    string(cert.Raw),
+		CertificateData:    string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})),
 		SignatureAlgorithm: cert.SignatureAlgorithm.String(),
-		SubjectKeyID:       string(cert.SubjectKeyId),
-		AuthorityKeyID:     string(cert.AuthorityKeyId),
+		SubjectKeyID:       hex.EncodeToString(cert.SubjectKeyId),
+		AuthorityKeyID:     hex.EncodeToString(cert.AuthorityKeyId),
 		IsCA:               cert.IsCA,
 		Issuer:             cert.Issuer.CommonName,
 		IsExpired:          cert.NotAfter.Before(cert.NotBefore),
 		Message:            fmt.Sprintf("Certificate will expire in %d days.", daysUntilExpiration),
 		Status:             status,
 	}
+}
+
+// Decode Certificate Data (PEM format)
+func DecodeCertificateData(certData string) (*x509.Certificate, error) {
+	// Decode the PEM encoded certificate
+	block, _ := pem.Decode([]byte(certData))
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block")
+	}
+
+	// Parse the certificate
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse certificate: %v", err)
+	}
+
+	return cert, nil
 }
 
 // Excel File Creation Function
@@ -307,4 +317,16 @@ func SetChangesToExcel(changes []models.Log) *excelize.File {
 
 	// return file for attachment
 	return f
+}
+
+func SendMailWithAttachment(logs []models.Log, f *excelize.File) {
+	mailContent := &models.Mail{
+		Sender:  config.C.Mail.FromMail,
+		To:      ToUsers,
+		Cc:      CCUsers,
+		Bcc:     []string{},
+		Subject: config.C.App.Name + " Error Logs",
+	}
+
+	mail.SendMail(mailContent, logs, f)
 }

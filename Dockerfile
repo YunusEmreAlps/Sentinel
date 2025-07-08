@@ -1,6 +1,6 @@
 # ----------------------------
 # STAGE-1: build stage
-FROM golang:1.17-alpine3.15 AS build-env
+FROM golang:1.21-alpine3.17 AS build-env
 RUN apk add build-base
 
 WORKDIR /src
@@ -13,10 +13,9 @@ RUN CGO_ENABLED=0 \
     GOARCH=amd64 \
     go build -o main .
 
-
 # ----------------------------
 # STAGE-2: output stage
-FROM alpine
+FROM alpine:3.17
 
 WORKDIR /app
 

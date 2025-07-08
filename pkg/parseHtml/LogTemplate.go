@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"sentinel/config"
-	"sentinel/logger"
-	"sentinel/models"
 	"strings"
 	"time"
+	"sentinel/config"
+	"sentinel/internal/models"
+	"sentinel/pkg/logger"
 )
 
 func LogTemplate(content *models.Mail, logs []models.Log, l string) string {

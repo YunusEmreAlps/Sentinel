@@ -1,0 +1,186 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "title": "Sentinel API",
+        "contact": {
+            "name": "Yunus Emre Alpu",
+            "url": "https://yunusemrealpu.netlify.app",
+            "email": "YunusAlpu@icloud.com"
+        },
+        "version": "1.0.0"
+    },
+    "basePath": "/sentinel",
+    "paths": {
+        "/certificates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "This endpoint retrieves the list of domains that have been checked when the /certificates/all endpoint was called.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Display domain list",
+                "responses": {
+                    "200": {
+                        "description": "List of domains successfully retrieved",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    },
+                    "400": {
+                        "description": "List certificates failed due to invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    },
+                    "422": {
+                        "description": "List certificates failed due to invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    },
+                    "500": {
+                        "description": "List certificates failed due to internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    }
+                }
+            }
+        },
+        "/certificates/all": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "This endpoint checks all domain SSL/TLS certificates and sends an email with the results.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Check all domain SSL/TLS certificates",
+                "responses": {
+                    "200": {
+                        "description": "All certificates checked successfully",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    },
+                    "400": {
+                        "description": "Certificate check failed due to invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    },
+                    "422": {
+                        "description": "Certificate check failed due to invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    },
+                    "500": {
+                        "description": "Certificate check failed due to internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    }
+                }
+            }
+        },
+        "/certificates/{domain}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "This endpoint checks the SSL/TLS certificate of a given domain and returns its details. Only one domain can be checked at a time.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Check a given domain certificate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "yunusemrealpu.netlify.app:443",
+                        "name": "domain",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Expire days, default is config.C.App.Expire value",
+                        "name": "expire",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Certificate details retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    },
+                    "400": {
+                        "description": "Certificate check failed due to invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    },
+                    "422": {
+                        "description": "Certificate check failed due to invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    },
+                    "500": {
+                        "description": "Certificate check failed due to internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "handlers.RespondJson": {
+            "type": "object",
+            "properties": {
+                "intent": {
+                    "type": "string"
+                },
+                "message": {},
+                "status": {
+                    "type": "boolean"
+                }
+            }
+        }
+    }
+}

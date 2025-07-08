@@ -9,8 +9,8 @@ import (
 	"net/smtp"
 
 	"sentinel/config"
-	"sentinel/logger"
-	"sentinel/models"
+	"sentinel/internal/models"
+	"sentinel/pkg/logger"
 	"sentinel/pkg/parseHtml"
 
 	"github.com/xuri/excelize/v2"
@@ -32,7 +32,7 @@ func SendMail(content *models.Mail, logs []models.Log, attachment *excelize.File
 	// Send mail with SMTP
 	// err := SendMailWithSmtp(mailConfig, content, logs, attachment)
 	// if err != nil {
-	// 	logger.ERROR.Println("ERROR: ", err)
+	// 	logger.CLogger.Error("ERROR: ", err)
 	// 	return err
 	// }
 

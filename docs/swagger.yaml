@@ -1,0 +1,122 @@
+basePath: /sentinel
+definitions:
+  handlers.RespondJson:
+    properties:
+      intent:
+        type: string
+      message: {}
+      status:
+        type: boolean
+    type: object
+info:
+  contact:
+    email: YunusAlpu@icloud.com
+    name: Yunus Emre Alpu
+    url: https://yunusemrealpu.netlify.app
+  title: Sentinel API
+  version: 1.0.0
+paths:
+  /certificates:
+    get:
+      consumes:
+      - application/json
+      description: This endpoint retrieves the list of domains that have been checked
+        when the /certificates/all endpoint was called.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of domains successfully retrieved
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+        "400":
+          description: List certificates failed due to invalid request
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+        "422":
+          description: List certificates failed due to invalid request
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+        "500":
+          description: List certificates failed due to internal server error
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+      security:
+      - BearerAuth: []
+      summary: Display domain list
+      tags:
+      - Certificates
+  /certificates/{domain}:
+    get:
+      consumes:
+      - application/json
+      description: This endpoint checks the SSL/TLS certificate of a given domain
+        and returns its details. Only one domain can be checked at a time.
+      parameters:
+      - description: yunusemrealpu.netlify.app:443
+        in: path
+        name: domain
+        required: true
+        type: string
+      - description: Expire days, default is config.C.App.Expire value
+        in: query
+        name: expire
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Certificate details retrieved successfully
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+        "400":
+          description: Certificate check failed due to invalid request
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+        "422":
+          description: Certificate check failed due to invalid request
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+        "500":
+          description: Certificate check failed due to internal server error
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+      security:
+      - BearerAuth: []
+      summary: Check a given domain certificate
+      tags:
+      - Certificates
+  /certificates/all:
+    get:
+      consumes:
+      - application/json
+      description: This endpoint checks all domain SSL/TLS certificates and sends
+        an email with the results.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: All certificates checked successfully
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+        "400":
+          description: Certificate check failed due to invalid request body
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+        "422":
+          description: Certificate check failed due to invalid request body
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+        "500":
+          description: Certificate check failed due to internal server error
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+      security:
+      - BearerAuth: []
+      summary: Check all domain SSL/TLS certificates
+      tags:
+      - Certificates
+schemes:
+- http
+- https
+swagger: "2.0"
