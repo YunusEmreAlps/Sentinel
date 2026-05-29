@@ -10,188 +10,170 @@
   </a>
 </p>
 
-# Sentinel (Certificate Expiration Checker)
+# Sentinel - SSL/TLS Certificate Monitor
 
-In the realm of digital security, "Sentinel" stands tall as an open-source powerhouse, meticulously crafted to monitor and control certificate expiration dates with unparalleled precision. With the release of version 1.0.0, Sentinel has ascended to new heights, now adept at retrieving critical certificate information from list and promptly alerting designated teams through comprehensive notifications, ensuring your systems remain secure.
+**Sentinel** is a high-performance, production-ready SSL/TLS certificate monitoring system built with Go. It continuously monitors certificate expiration dates, provides real-time alerts, and generates comprehensive reports to ensure your digital infrastructure remains secure.
 
-> This project support Openshift Serverless Architecture (Tested and works perfectly)
+## Key Features
+
+- **Concurrent Processing**: Worker pool with 10 concurrent workers for fast bulk checks
+- **Optimized Performance**: Sub-5 second certificate checks with retry logic
+- **Graceful Shutdown**: Proper resource cleanup and connection management
+- **PostgreSQL + Redis**: Connection pooling and caching for optimal performance
+- **Email Notifications**: Automated alerts with Excel reports
+- **Swagger API**: Interactive API documentation
+- **Distributed Tracing**: Jaeger integration for monitoring
+- **Prometheus Metrics**: Built-in performance monitoring
+- **CORS Support**: Cross-origin requests enabled
+- **Context Timeouts**: Proper timeout handling (30s default, configurable)
 
 ## Table of Contents
 
-- [Sentinel (Certificate Expiration Checker)](#sentinel-certificate-expiration-checker)
+- [Sentinel - SSL/TLS Certificate Monitor](#sentinel---ssltls-certificate-monitor)
+  - [Key Features](#key-features)
   - [Table of Contents](#table-of-contents)
   - [Meaning of Sentinel](#meaning-of-sentinel)
-  - [Development Guide](#development-guide)
-    - [1. Prerequisites](#1-prerequisites)
-    - [2. Installation](#2-installation)
-    - [4. Running the Application](#4-running-the-application)
-      - [Run without Docker](#run-without-docker)
-      - [Run with Docker](#run-with-docker)
-    - [3. Environment Variables](#3-environment-variables)
-  - [Project Structure](#project-structure)
-    - [Key Components](#key-components)
-  - [Major Packages](#major-packages)
-  - [Contributing](#contributing)
+  - [Quick Start](#quick-start)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+    - [Configuration](#configuration)
+    - [Running](#running)
+      - [Direct Run](#direct-run)
+      - [Docker](#docker)
+  - [Project Architecture](#project-architecture)
+    - [Directory Structure](#directory-structure)
   - [API Documentation](#api-documentation)
     - [Accessing Swagger Documentation](#accessing-swagger-documentation)
     - [API Endpoints](#api-endpoints)
     - [Example API Response](#example-api-response)
-  - [License](#license)
-
+  - [Contributing](#contributing)
 
 ## Meaning of Sentinel
 
-**Mythological & Historical Context:**
-In ancient mythology and military history, a sentinel represents a watchful guardian or sentry posted to keep watch and warn of approaching danger. These vigilant protectors were entrusted with the critical responsibility of maintaining constant surveillance, ensuring the safety of their domain through unwavering attention and immediate alert systems.
+**Mythological Context:**  
+In ancient mythology, a sentinel was a watchful guardian posted to warn of approaching danger. These vigilant protectors maintained constant surveillance to ensure safety through immediate alert systems.
 
-**For This Project:**
-Sentinel embodies the essence of a vigilant guardian standing watch, epitomizing the system's core mission of safeguarding your digital infrastructure by actively monitoring and controlling certificate expiration dates. Like its mythological counterpart, this digital sentinel maintains constant vigilance over your certificates, providing early warnings and comprehensive protection against security vulnerabilities.
+**For This Project:**  
+Sentinel embodies this guardian spirit by continuously monitoring your SSL/TLS certificates, providing early warnings before expiration, and ensuring your digital infrastructure remains secure.
 
-## Development Guide
+---
 
-Sentinel is designed to be a robust and efficient tool for managing certificate expiration dates. Below is a guide to help you set up and run the project, whether you prefer using Docker or running it directly on your machine.
+## Quick Start
 
-### 1. Prerequisites
+### Prerequisites
 
-- [Go 1.21](https://go.dev/dl/) (The project is developed using Go 1.21.1)
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
-- [Postman](https://www.postman.com/downloads/)
-- [Git](https://git-scm.com/downloads)
+- **Go 1.21+** - [Download](https://go.dev/dl/)
+- **PostgreSQL 12+** - For data persistence
+- **Redis 6+** - For caching (optional)
+- **Docker & Docker Compose** - For containerized deployment (optional)
 
-> **Note**: The project uses Go 1.21, so make sure to have the correct version installed. You can check the Go version using the following command:
-
-```bash
-go version
-```
-
-### 2. Installation
-
-We can run this **Sentinel** project with or without Docker. Here, I am providing both ways to run this project.
-
-- Clone the repository
+### Installation
 
 ```bash
+# Clone the repository
 git clone <repository-url>
-```
 
-- Go to your workspace
-
-```bash
-cd <path-to-your-workspace>
-```
-
-- Navigate to the project directory
-
-```bash
+# Navigate to the project directory
 cd Sentinel
+
+# Install dependencies
+go mod tidy
 ```
 
-- Create a file `.env` similar to `.env.example` at the **/config directory** with your configuration.
+### Configuration
 
-> **Note**: In this version, No need to database connection. The project uses a REST API to fetch certificate information from a list, so you don't need to set up a PostgreSQL database.
+Create a `.env` file in the `/config` directory based on the provided `sample.env.yaml` template.
 
-### 4. Running the Application
+### Running
 
-Choose between two deployment options based on your requirements:
+#### Direct Run
 
-#### Run without Docker
+```bash
+# Start the application
+go run main.go
 
-Follow these steps to run Sentinel directly on your machine:
+# Or build and run
+go build -o sentinel.exe .
+./sentinel.exe
+```
 
-1. **Ensure Prerequisites**: Make sure Go 1.21+ is installed and accessible
-2. **Environment Setup**: Create a `.env` file in the `/config` directory based on `sample.env.yaml`
-3. **Install Dependencies**: Run `go mod tidy` to download all required packages
-4. **Start Application**: Execute `go run main.go` from the project root
+#### Docker
 
-> **Note**: For Version 1 (CRON-based), the application will run as a background service. For Version 2 (REST API), it will start a web server.
+```bash
+# Start all services (Sentinel + PostgreSQL + Redis)
+docker-compose up -d
 
-#### Run with Docker
+# Check status
+docker-compose ps
 
-For containerized deployment:
+# View logs
+docker-compose logs -f sentinel
+```
 
-1. **Environment Setup**: Create a `.env` file in the `/config` directory
-2. **Docker Deployment**: Run `docker-compose up -d`
-3. **Verify**: Check container status with `docker-compose ps`
+**Access the API:**
 
-> **Note**: Docker Compose will handle all dependencies and networking automatically.
+- Swagger UI: <http://localhost:8080/sentinel/swagger/index.html>
+- Health Check: <http://localhost:8080/sentinel/health>
 
-### 3. Environment Variables
+---
 
-- Create a file `.env` similar to `.env.example` at the **/config directory** with your configuration.
-- The `.env` file contains environment variables that are used to configure the application. It is essential to set these variables correctly for the application to function properly.
+## Project Architecture
 
-## Project Structure
+### Directory Structure
 
 ```text
 Sentinel/
-├── assets/                 # Project assets and images
-│   └── sentinel.png
-├── config/                 # Configuration files
-│   ├── config.go          # Configuration structure
-│   └── .env.example       # Environment variables template
-├── internal/               # Internal application packages
-│   ├── handlers/          # HTTP request handlers
-│   │   ├── get_all_expirations.go
-│   │   ├── get_certificate_info.go
-│   │   ├── handlers.go
-│   │   └── list_certificates.go
-│   └── models/            # Data models
-│       ├── log.go
-│       └── mail.go
-├── pkg/                   # Public packages
-│   ├── db/               # Database connections
-│   │   ├── postgres/
-│   │   └── redis/
-│   ├── logger/           # Logging utilities
-│   ├── mail/             # Email functionality
-│   ├── metric/           # Metrics and monitoring
-│   ├── parseHtml/        # HTML template parsing
-│   ├── templates/        # HTML templates
-│   └── utils/            # Utility functions
-├── Dockerfile            # Docker container definition
-├── docker-compose.yml    # Docker Compose configuration
-├── go.mod               # Go module definition
-├── go.sum               # Go module checksums
-├── main.go              # Application entry point
-└── README.md            # Project documentation
+├── assets/                      # Project assets
+│   └── sentinel.png            # Logo and images
+├── config/                      # Configuration management
+│   ├── config.go               # Config loader with Viper
+│   └── sample.env.yaml         # Configuration template
+├── docs/                        # Auto-generated Swagger docs
+│   ├── docs.go
+│   ├── swagger.json
+│   └── swagger.yaml
+├── internal/                    # Private application code
+│   ├── handlers/               # HTTP request handlers
+│   │   ├── handlers.go         # Router initialization + CORS
+│   │   ├── list_certificates.go      # GET /certificates
+│   │   ├── get_certificate_info.go   # GET /certificates/:domain
+│   │   └── get_all_expirations.go    # GET /certificates/all
+│   └── models/                 # Data models
+│       ├── log.go              # Certificate log model
+│       └── mail.go             # Email notification model
+├── pkg/                         # Public reusable packages
+│   ├── constants/              # Application constants
+│   │   └── constants.go        # Timeouts, status codes, etc.
+│   ├── db/                     # Database connections
+│   │   ├── postgres/           # PostgreSQL with connection pool
+│   │   │   └── db_conn.go      # 60 max, 30 idle connections
+│   │   └── redis/              # Redis caching
+│   │       └── conn.go
+│   ├── logger/                 # Structured logging
+│   │   └── logger.go           # Logrus integration
+│   ├── mail/                   # Email service
+│   │   └── send_mail.go        # SMTP with Excel attachments
+│   ├── metric/                 # Prometheus metrics
+│   │   └── metric.go
+│   ├── parseHtml/              # Template rendering
+│   │   └── LogTemplate.go
+│   ├── templates/              # HTML email templates
+│   │   ├── log.html
+│   │   └── welcome.html
+│   └── utils/                  # Utility functions
+│       ├── cert_checker.go     # Concurrent worker pool
+│       ├── retry.go            # Retry logic with exponential backoff
+│       ├── helpers.go          # Certificate checking core
+│       ├── data.go             # Domain list configuration
+│       └── utils.go            # Helper functions
+├── Dockerfile                   # Container definition
+├── docker-compose.yml          # Multi-container setup
+├── go.mod                      # Go module dependencies
+├── go.sum                      # Dependency checksums
+├── main.go                     # Application entry point
+└── README.md                   # Documentation
+
 ```
-
-### Key Components
-
-- **`config/`**: Configuration management with YAML and environment variable support
-- **`internal/handlers/`**: HTTP API endpoints for certificate operations
-- **`internal/models/`**: Data structures for logs and email notifications
-- **`pkg/`**: Reusable packages for database, logging, metrics, and utilities
-- **`main.go`**: Application bootstrap with server initialization
-
-## Major Packages
-
-- **gin-gonic/gin**: High-performance HTTP web framework written in Go. Features include JSON validation, error management, middleware support, and excellent performance.
-- **gorm**: The fantastic ORM library for Golang with support for PostgreSQL, MySQL, SQLite, and SQL Server. Aims to be developer friendly with features like auto migration, associations, hooks, and transactions.
-- **gorm.io/driver/postgres**: Official PostgreSQL driver for GORM ORM.
-- **viper**: Go configuration with fangs. Find, load, and unmarshal configuration files in JSON, TOML, YAML, HCL, INI, envfile, or Java properties formats.
-- **go-redis/redis**: Type-safe Redis client for Golang with support for Redis 6 commands, pipelining, transactions, and Lua scripting.
-- **excelize**: Go library for reading and writing Microsoft Excel™ (XLSX) files. Used for generating Excel reports of certificate information.
-- **logrus**: Structured logger for Go, completely API compatible with the standard library logger.
-- **gin-contrib/cache**: Gin middleware for HTTP caching with multiple storage backends including Redis and in-memory cache.
-- **swaggo**: Automatically generate RESTful API documentation with Swagger 2.0 for Go. Includes gin-swagger for Gin framework integration.
-- **gomail**: Simple and efficient package for sending emails. Supports HTML emails, attachments, and embedded files.
-- **jaeger**: Distributed tracing system for monitoring and troubleshooting microservices-based distributed systems.
-- **prometheus**: Monitoring system and time series database with powerful query language and alerting capabilities.
-- **opentracing**: Vendor-neutral APIs and instrumentation for distributed tracing.
-- Check more packages in `go.mod`.
-
-## Contributing
-
-We welcome contributions to Sentinel! To contribute to the project, please follow these steps:
-
-- Fork the repository.
-- Create a new branch for your feature or bug fix.
-- Make your changes and ensure that the tests pass.
-- Commit your changes and push them to your fork.
-- Submit a pull request to the main repository, describing your changes in detail.
-- Please review the Contribution Guidelines for more information.
 
 ## API Documentation
 
@@ -213,9 +195,9 @@ Sentinel provides comprehensive API documentation through Swagger/OpenAPI specif
 
 ```json
 {
-  "status": true,
-  "intent": "cld:::sentinel:::/certificates/:domain",
-  "message": [
+  "success": true,
+  "path": "/certificates/:domain",
+  "data": [
     {
       "version": 3,
       "serial_number": "6523920412297345150429844430373140538",
@@ -247,8 +229,13 @@ Sentinel provides comprehensive API documentation through Swagger/OpenAPI specif
 ![Swagger 2](assets/2.png)
 ![Swagger 3](assets/3.png)
 
-## License
+## Contributing
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+We welcome contributions to Sentinel! To contribute to the project, please follow these steps:
 
----
+- Fork the repository.
+- Create a new branch for your feature or bug fix.
+- Make your changes and ensure that the tests pass.
+- Commit your changes and push them to your fork.
+- Submit a pull request to the main repository, describing your changes in detail.
+- Please review the Contribution Guidelines for more information.

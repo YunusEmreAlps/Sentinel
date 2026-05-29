@@ -41,25 +41,25 @@ const docTemplate = `{
                     "200": {
                         "description": "All certificates checked successfully",
                         "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     },
                     "400": {
                         "description": "Certificate check failed due to invalid request body",
                         "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     },
                     "422": {
                         "description": "Certificate check failed due to invalid request body",
                         "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Certificate check failed due to internal server error",
                         "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     }
                 }
@@ -102,25 +102,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Certificate details retrieved successfully",
                         "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     },
                     "400": {
                         "description": "Certificate check failed due to invalid request",
                         "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     },
                     "422": {
                         "description": "Certificate check failed due to invalid request",
                         "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Certificate check failed due to internal server error",
                         "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     }
                 }
@@ -148,25 +148,25 @@ const docTemplate = `{
                     "200": {
                         "description": "List of domains successfully retrieved",
                         "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     },
                     "400": {
                         "description": "List certificates failed due to invalid request",
                         "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     },
                     "422": {
                         "description": "List certificates failed due to invalid request",
                         "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     },
                     "500": {
                         "description": "List certificates failed due to internal server error",
                         "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
+                            "$ref": "#/definitions/models.APIResponse"
                         }
                     }
                 }
@@ -174,14 +174,14 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "handlers.RespondJson": {
+        "models.APIResponse": {
             "type": "object",
             "properties": {
-                "intent": {
+                "data": {},
+                "path": {
                     "type": "string"
                 },
-                "message": {},
-                "status": {
+                "success": {
                     "type": "boolean"
                 }
             }

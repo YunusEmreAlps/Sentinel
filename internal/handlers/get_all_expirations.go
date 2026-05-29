@@ -22,10 +22,10 @@ import (
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} RespondJson "All certificates checked successfully"
-// @Failure 400 {object} RespondJson "Certificate check failed due to invalid request body"
-// @Failure 422 {object} RespondJson "Certificate check failed due to invalid request body"
-// @Failure 500 {object} RespondJson "Certificate check failed due to internal server error"
+// @Success 200 {object} models.APIResponse "All certificates checked successfully"
+// @Failure 400 {object} models.APIResponse "Certificate check failed due to invalid request body"
+// @Failure 422 {object} models.APIResponse "Certificate check failed due to invalid request body"
+// @Failure 500 {object} models.APIResponse "Certificate check failed due to internal server error"
 // @Router /certificates/scan [GET]
 func (ss *Sentinel) GetAllExpirations(c *gin.Context) (int, interface{}, error) {
 	logger.CLogger.Info("INFO: Checking all certificates concurrently...")

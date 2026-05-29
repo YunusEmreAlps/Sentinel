@@ -26,10 +26,10 @@ import (
 // @Security BearerAuth
 // @Param domain path string true "yunusemrealpu.netlify.app:443"
 // @Param expire query int false "Expire days, default is config.C.App.Expire value"
-// @Success 200 {object} RespondJson "Certificate details retrieved successfully"
-// @Failure 400 {object} RespondJson "Certificate check failed due to invalid request"
-// @Failure 422 {object} RespondJson "Certificate check failed due to invalid request"
-// @Failure 500 {object} RespondJson "Certificate check failed due to internal server error"
+// @Success 200 {object} models.APIResponse "Certificate details retrieved successfully"
+// @Failure 400 {object} models.APIResponse "Certificate check failed due to invalid request"
+// @Failure 422 {object} models.APIResponse "Certificate check failed due to invalid request"
+// @Failure 500 {object} models.APIResponse "Certificate check failed due to internal server error"
 // @Router /certificates/{domain} [get]
 func (ss *Sentinel) GetCertificateInfo(c *gin.Context) (int, interface{}, error) {
 	// Get domain from the request parameters

@@ -7,6 +7,8 @@ import (
 	"sentinel/config"
 	"sentinel/pkg/metric"
 
+	"sentinel/internal/models"
+
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
@@ -15,7 +17,6 @@ import (
 
 const (
 	API_PREFIX = "/sentinel"
-	RN_PREFIX  = "cld:::sentinel:::"
 )
 
 // Sentinel is a struct for auth core
@@ -43,24 +44,19 @@ func NewSentinelService(
 	}
 }
 
-type RespondJson struct {
-	Status  bool        `json:"status"`
-	Intent  string      `json:"intent"`
-	Message interface{} `json:"message"`
-}
-
-func respondJson(ctx *gin.Context, code int, intent string, message interface{}, err error) {
+// respondJson standardizes API responses with consistent format
+func respondJson(ctx *gin.Context, code int, path string, data interface{}, err error) {
 	if err == nil {
-		ctx.JSON(code, RespondJson{
-			Status:  true,
-			Intent:  intent,
-			Message: message,
+		ctx.JSON(code, models.APIResponse{
+			Success: true,
+			Path:    path,
+			Data:    data,
 		})
 	} else {
-		ctx.JSON(code, RespondJson{
-			Status:  false,
-			Intent:  intent,
-			Message: err.Error(),
+		ctx.JSON(code, models.APIResponse{
+			Success: false,
+			Path:    path,
+			Data:    err.Error(),
 		})
 	}
 }
@@ -80,19 +76,19 @@ func (bs *Sentinel) InitRouter(r *gin.Engine) {
 	// List all certificates
 	v1.GET("/domains", func(ctx *gin.Context) {
 		code, data, err := bs.ListCertificates(ctx)
-		respondJson(ctx, code, RN_PREFIX+"/certificates", data, err)
+		respondJson(ctx, code, API_PREFIX+"/domains", data, err)
 	})
 
 	// Certificate information for a specific domain
 	v1.GET("/certificates/:domain", func(ctx *gin.Context) {
 		code, data, err := bs.GetCertificateInfo(ctx)
-		respondJson(ctx, code, RN_PREFIX+"/certificates/:domain", data, err)
+		respondJson(ctx, code, API_PREFIX+"/certificates/:domain", data, err)
 	})
 
 	// Get all certificates from the utility/data.go file
 	v1.GET("/certificates/scan", func(ctx *gin.Context) {
 		code, data, err := bs.GetAllExpirations(ctx)
-		respondJson(ctx, code, RN_PREFIX+"/check/all", data, err)
+		respondJson(ctx, code, API_PREFIX+"/certificates/scan", data, err)
 	})
 
 	// Health check

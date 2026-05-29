@@ -16,10 +16,10 @@ import (
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} RespondJson "List of domains successfully retrieved"
-// @Failure 400 {object} RespondJson "List certificates failed due to invalid request"
-// @Failure 422 {object} RespondJson "List certificates failed due to invalid request"
-// @Failure 500 {object} RespondJson "List certificates failed due to internal server error"
+// @Success 200 {object} models.APIResponse "List of domains successfully retrieved"
+// @Failure 400 {object} models.APIResponse "List certificates failed due to invalid request"
+// @Failure 422 {object} models.APIResponse "List certificates failed due to invalid request"
+// @Failure 500 {object} models.APIResponse "List certificates failed due to internal server error"
 // @Router /domains [GET]
 func (ss *Sentinel) ListCertificates(c *gin.Context) (int, interface{}, error) {
 	return http.StatusOK, utils.DomainList, nil
