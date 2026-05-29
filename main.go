@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gin-contrib/cache/persistence"
@@ -24,6 +27,7 @@ import (
 
 	"sentinel/config"
 	"sentinel/internal/handlers"
+	"sentinel/pkg/constants"
 	"sentinel/pkg/db/postgres"
 	rediscfg "sentinel/pkg/db/redis"
 	"sentinel/pkg/logger"
@@ -109,9 +113,54 @@ func main() {
 	defer closer.Close()
 	logger.CLogger.Info("Opentracing connected")
 
-	// run application
-	logger.CLogger.Info("INIT: Application " + APP_NAME + " started on port " + port)
-	logger.CLogger.Info(router.Run(":" + port))
+	// Create HTTP server with timeouts
+	srv := &http.Server{
+		Addr:           ":" + port,
+		Handler:        router,
+		ReadTimeout:    constants.ServerReadTimeout,
+		WriteTimeout:   constants.ServerWriteTimeout,
+		IdleTimeout:    constants.ServerIdleTimeout,
+		MaxHeaderBytes: constants.ServerMaxHeaderBytes,
+	}
+
+	// Run server in goroutine
+	go func() {
+		logger.CLogger.Info("INIT: Application " + APP_NAME + " started on port " + port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.CLogger.Fatal("INIT: Server failed to start: ", err)
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	logger.CLogger.Info("SHUTDOWN: Shutting down server...")
+
+	// Create shutdown context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), constants.ShutdownTimeout)
+	defer cancel()
+
+	// Shutdown server gracefully
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.CLogger.Fatal("SHUTDOWN: Server forced to shutdown: ", err)
+	}
+
+	// Close database connection if active
+	if config.C.DB.Active && dbConn != nil {
+		sqlDB, err := dbConn.DB()
+		if err == nil {
+			sqlDB.Close()
+		}
+	}
+
+	// Close Redis connection if active
+	if config.C.Cache.Active && cacheConn != nil {
+		cacheConn.Close()
+	}
+
+	logger.CLogger.Info("SHUTDOWN: Server exited gracefully")
 }
 
 // Initialize Application

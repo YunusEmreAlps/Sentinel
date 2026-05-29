@@ -77,16 +77,8 @@ func (bs *Sentinel) InitRouter(r *gin.Engine) {
 	v1 := r.Group(API_PREFIX)
 	health := v1.Group("/health")
 
-	// Set up the Gin router
-	/*r.LoadHTMLGlob("pkg/templates/*")
-
-	// Serve the welcome page
-	r.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "welcome.html", nil)
-	})*/
-
 	// List all certificates
-	v1.GET("/certificates", func(ctx *gin.Context) {
+	v1.GET("/domains", func(ctx *gin.Context) {
 		code, data, err := bs.ListCertificates(ctx)
 		respondJson(ctx, code, RN_PREFIX+"/certificates", data, err)
 	})
@@ -98,7 +90,7 @@ func (bs *Sentinel) InitRouter(r *gin.Engine) {
 	})
 
 	// Get all certificates from the utility/data.go file
-	v1.GET("/certificates/all", func(ctx *gin.Context) {
+	v1.GET("/certificates/scan", func(ctx *gin.Context) {
 		code, data, err := bs.GetAllExpirations(ctx)
 		respondJson(ctx, code, RN_PREFIX+"/check/all", data, err)
 	})

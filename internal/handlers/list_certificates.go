@@ -20,7 +20,7 @@ import (
 // @Failure 400 {object} RespondJson "List certificates failed due to invalid request"
 // @Failure 422 {object} RespondJson "List certificates failed due to invalid request"
 // @Failure 500 {object} RespondJson "List certificates failed due to internal server error"
-// @Router /certificates [get]
+// @Router /domains [GET]
 func (ss *Sentinel) ListCertificates(c *gin.Context) (int, interface{}, error) {
 	return http.StatusOK, utils.DomainList, nil
 }

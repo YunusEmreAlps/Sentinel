@@ -16,36 +16,6 @@ info:
   title: Sentinel API
   version: 1.0.0
 paths:
-  /certificates:
-    get:
-      consumes:
-      - application/json
-      description: This endpoint retrieves the list of domains that have been checked
-        when the /certificates/all endpoint was called.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of domains successfully retrieved
-          schema:
-            $ref: '#/definitions/handlers.RespondJson'
-        "400":
-          description: List certificates failed due to invalid request
-          schema:
-            $ref: '#/definitions/handlers.RespondJson'
-        "422":
-          description: List certificates failed due to invalid request
-          schema:
-            $ref: '#/definitions/handlers.RespondJson'
-        "500":
-          description: List certificates failed due to internal server error
-          schema:
-            $ref: '#/definitions/handlers.RespondJson'
-      security:
-      - BearerAuth: []
-      summary: Display domain list
-      tags:
-      - Certificates
   /certificates/{domain}:
     get:
       consumes:
@@ -86,7 +56,7 @@ paths:
       summary: Check a given domain certificate
       tags:
       - Certificates
-  /certificates/all:
+  /certificates/scan:
     get:
       consumes:
       - application/json
@@ -114,6 +84,36 @@ paths:
       security:
       - BearerAuth: []
       summary: Check all domain SSL/TLS certificates
+      tags:
+      - Certificates
+  /domains:
+    get:
+      consumes:
+      - application/json
+      description: This endpoint retrieves the list of domains that have been checked
+        when the /certificates/all endpoint was called.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of domains successfully retrieved
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+        "400":
+          description: List certificates failed due to invalid request
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+        "422":
+          description: List certificates failed due to invalid request
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+        "500":
+          description: List certificates failed due to internal server error
+          schema:
+            $ref: '#/definitions/handlers.RespondJson'
+      security:
+      - BearerAuth: []
+      summary: Display domain list
       tags:
       - Certificates
 schemes:

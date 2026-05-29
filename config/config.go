@@ -6,7 +6,6 @@ import (
 
 	"sentinel/pkg/logger"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/viper"
 )
 
@@ -96,14 +95,13 @@ func ReadConfig(processCwdir string) {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
-		// fmt.Println("Cannot read config file:", err)
-		logger.CLogger.Info("Cannot read config file:", err)
+		logger.CLogger.Error("Cannot read config file:", err)
 	}
 
 	if err := viper.Unmarshal(&Config); err != nil {
-		logger.CLogger.Info("Cannot unmarshal config file:", err)
+		logger.CLogger.Error("Cannot unmarshal config file:", err)
 		os.Exit(1)
 	}
 
-	spew.Dump(C)
+	logger.CLogger.Infof("Config loaded successfully - App: %s, Mode: %s, Port: %s", C.App.Name, C.App.Mode, C.App.Port)
 }

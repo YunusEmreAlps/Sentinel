@@ -205,10 +205,9 @@ Sentinel provides comprehensive API documentation through Swagger/OpenAPI specif
 
 ### API Endpoints
 
-- **GET `/certificates`**: List all monitored certificates
+- **GET `/domains`**: List all monitored domains
+- **GET `/certificates/scan`**: Get certificates approaching expiration
 - **GET `/certificates/{domain}`**: Get certificate information for a specific domain
-- **GET `/expirations`**: Get certificates approaching expiration
-- **POST `/check`**: Manually trigger certificate check
 
 ### Example API Response
 

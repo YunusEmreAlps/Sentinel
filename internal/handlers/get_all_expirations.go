@@ -1,12 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
+
 	"sentinel/config"
-	"sentinel/internal/models"
 	"sentinel/pkg/logger"
 	"sentinel/pkg/utils"
 
@@ -26,47 +26,31 @@ import (
 // @Failure 400 {object} RespondJson "Certificate check failed due to invalid request body"
 // @Failure 422 {object} RespondJson "Certificate check failed due to invalid request body"
 // @Failure 500 {object} RespondJson "Certificate check failed due to internal server error"
-// @Router /certificates/all [get]
+// @Router /certificates/scan [GET]
 func (ss *Sentinel) GetAllExpirations(c *gin.Context) (int, interface{}, error) {
-	// Step 1: Get all certificates from the utility/data.go
-	var logs []models.Log
+	logger.CLogger.Info("INFO: Checking all certificates concurrently...")
 
-	fmt.Println("INFO: Checking all certificates...")
+	// Create context with timeout
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
+	defer cancel()
 
-	for _, domain := range utils.DomainList {
+	// Use concurrent certificate checker with worker pool
+	checker := utils.NewCertificateChecker(10) // 10 concurrent workers
+	logs := checker.CheckCertificates(ctx, utils.DomainList, config.C.App.Expire)
 
-		const maxRetries = 3
-		for i := 0; i < maxRetries; i++ {
-			isOK, data := utils.CheckDomainCertificate(domain, config.C.App.Expire)
-			if isOK && data != nil {
-				// Successfully retrieved certificate, break out of the loop
-				logs = append(logs, *data)
-				break
-			} else {
-				if data != nil {
-					// Certificate will not expired in 30 days
-					logger.CLogger.Info("INFO: ", domain+" - "+data.Message)
-					break
-				} else {
-					// Connection Error
-					logger.CLogger.Error("ERROR: ", domain+" - Connection Error Attempt: "+strconv.Itoa(i+1)+"/"+strconv.Itoa(maxRetries))
-				}
-			}
-			// Wait for a brief period before retrying
-			time.Sleep(2 * time.Second)
+	// Send to Mail if there are logs
+	if len(logs) > 0 {
+		f := utils.SetChangesToExcel(logs)
+		if f == nil {
+			logger.CLogger.Error("ERROR: Failed to create Excel file")
+			return http.StatusInternalServerError, nil, fmt.Errorf("failed to create Excel file")
 		}
-	}
-
-	// Send to Mail
-	f := utils.SetChangesToExcel(logs)
-	if f == nil {
-		logger.CLogger.Error("ERROR: ", "Failed to create Excel file")
-		return http.StatusInternalServerError, nil, fmt.Errorf("failed to create Excel file")
-	} else {
-		logger.CLogger.Info("INFO: ", "Excel file created successfully")
+		logger.CLogger.Info("INFO: Excel file created successfully")
 		utils.SendMailWithAttachment(logs, f)
+	} else {
+		logger.CLogger.Info("INFO: No expiring certificates found")
 	}
 
-	// Step 2: Return all logs
+	// Return all logs
 	return http.StatusOK, logs, nil
 }

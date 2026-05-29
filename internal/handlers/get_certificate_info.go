@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
+
 	"sentinel/config"
 	"sentinel/internal/models"
 	"sentinel/pkg/logger"
@@ -46,31 +48,32 @@ func (ss *Sentinel) GetCertificateInfo(c *gin.Context) (int, interface{}, error)
 		}
 	}
 
+	// Create context with timeout
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
 	var logs []models.Log
-	const maxRetries = 3
-	retryDelay := 2 * time.Second
+	var isExpired bool
+	var data *models.Log
 
-	for i := 0; i < maxRetries; i++ {
-		isOK, data := utils.CheckDomainCertificate(domain, expireDays)
-		if isOK && data != nil {
-			// Successfully retrieved certificate
-			logs = append(logs, *data)
-			break
+	// Use retry logic with context
+	retryConfig := utils.DefaultRetryConfig()
+	err := utils.RetryWithContext(ctx, retryConfig, func(attemptCtx context.Context) error {
+		isExpired, data = utils.CheckDomainCertificateWithContext(attemptCtx, domain, expireDays)
+		if !isExpired && data == nil {
+			return fmt.Errorf("failed to retrieve certificate")
 		}
+		return nil
+	}, domain)
 
-		if data != nil {
-			// Certificate is valid and not expiring soon
-			logger.CLogger.Info(fmt.Sprintf("INFO: %s - %s", domain, data.Message))
-			break
-		}
-
-		// Log connection error and retry
-		logger.CLogger.Error(fmt.Sprintf("ERROR: %s - Connection Error Attempt: %d/%d", domain, i+1, maxRetries))
-		time.Sleep(retryDelay)
+	if err != nil {
+		return http.StatusOK, nil, fmt.Errorf("%s domain expires in more than %d days or check failed", domain, expireDays)
 	}
 
-	// If no logs were added, return an error
-	if len(logs) == 0 {
+	if isExpired && data != nil {
+		logs = append(logs, *data)
+	} else if data != nil {
+		logger.CLogger.Infof("INFO: %s - %s", domain, data.Message)
 		return http.StatusOK, nil, fmt.Errorf("%s domain expires in more than %d days", domain, expireDays)
 	}
 

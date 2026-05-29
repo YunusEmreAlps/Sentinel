@@ -19,53 +19,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/certificates": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "This endpoint retrieves the list of domains that have been checked when the /certificates/all endpoint was called.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Certificates"
-                ],
-                "summary": "Display domain list",
-                "responses": {
-                    "200": {
-                        "description": "List of domains successfully retrieved",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
-                        }
-                    },
-                    "400": {
-                        "description": "List certificates failed due to invalid request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
-                        }
-                    },
-                    "422": {
-                        "description": "List certificates failed due to invalid request",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
-                        }
-                    },
-                    "500": {
-                        "description": "List certificates failed due to internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.RespondJson"
-                        }
-                    }
-                }
-            }
-        },
-        "/certificates/all": {
+        "/certificates/scan": {
             "get": {
                 "security": [
                     {
@@ -165,6 +119,52 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Certificate check failed due to internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    }
+                }
+            }
+        },
+        "/domains": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "This endpoint retrieves the list of domains that have been checked when the /certificates/all endpoint was called.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Display domain list",
+                "responses": {
+                    "200": {
+                        "description": "List of domains successfully retrieved",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    },
+                    "400": {
+                        "description": "List certificates failed due to invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    },
+                    "422": {
+                        "description": "List certificates failed due to invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.RespondJson"
+                        }
+                    },
+                    "500": {
+                        "description": "List certificates failed due to internal server error",
                         "schema": {
                             "$ref": "#/definitions/handlers.RespondJson"
                         }

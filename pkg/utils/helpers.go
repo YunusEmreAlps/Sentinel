@@ -1,13 +1,12 @@
 package utils
 
 import (
-	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"net"
 	"strconv"
 	"strings"
@@ -15,6 +14,7 @@ import (
 
 	"sentinel/config"
 	"sentinel/internal/models"
+	"sentinel/pkg/constants"
 	"sentinel/pkg/logger"
 	"sentinel/pkg/mail"
 
@@ -93,20 +93,28 @@ func UrlToOptions(url string) (string, string, string, string, string, string) {
 	return protocol, username, password, host, port, db
 }
 
-// Check Domain Certificate
+// Check Domain Certificate with context support
 func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
-	status := 0
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
+	defer cancel()
+	return CheckDomainCertificateWithContext(ctx, domain, day)
+}
+
+// CheckDomainCertificateWithContext checks domain certificate with context support for timeout and cancellation
+func CheckDomainCertificateWithContext(ctx context.Context, domain string, day int) (bool, *models.Log) {
+	status := constants.CertStatusNotExpired
 
 	if day <= 0 {
-		day = 30
+		day = constants.DefaultExpireDays
 	}
 
 	// false: certificate will not expire in 30 days
 	// true: certificate will expire in 30 days
 	logger.CLogger.Info("INFO: Checking certificate for " + domain)
 
-	// TCP connection to domain
-	conn, err := net.Dial("tcp", domain)
+	// TCP connection to domain with context
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, "tcp", domain)
 	if err != nil {
 		if netErr, ok := err.(*net.OpError); ok && netErr.Op == "dial" {
 			// DNS resolution error
@@ -119,6 +127,11 @@ func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
 	}
 	defer conn.Close()
 
+	// Set deadline for connection based on context
+	if deadline, ok := ctx.Deadline(); ok {
+		conn.SetDeadline(deadline)
+	}
+
 	// TLS Handshake
 	// x509: certificate signed by unknown authority
 	tlsConn := tls.Client(conn, &tls.Config{
@@ -130,40 +143,36 @@ func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
 		logger.CLogger.Error("TLS Handshake failed:", err)
 		return false, nil
 	}
+	defer tlsConn.Close()
 
-	// HTTP Request
-	req := "GET / HTTP/1.1\r\nHost: " + strings.Split(domain, ":")[0] + "\r\n\r\n"
-	if _, err := tlsConn.Write([]byte(req)); err != nil {
-		logger.CLogger.Error("Failed to write HTTP request:", err)
+	// Get certificate info directly from TLS connection state
+	// No need to read HTTP response body - just handshake is enough
+	state := tlsConn.ConnectionState()
+	if len(state.PeerCertificates) == 0 {
+		logger.CLogger.Error("No peer certificates found")
 		return false, nil
 	}
 
-	// HTTP Response
-	var responseBuffer bytes.Buffer
-	buf := make([]byte, 1024)
-	for {
-		n, err := tlsConn.Read(buf)
-		if err != nil {
-			if err != io.EOF {
-				logger.CLogger.Error("Failed to read HTTP response:", err)
-			}
-			break
-		}
-		responseBuffer.Write(buf[:n])
-	}
-
-	// Certification Info is here
-	cert := tlsConn.ConnectionState().PeerCertificates[0]
+	cert := state.PeerCertificates[0]
 	tempPort, _ := strconv.Atoi(strings.Split(domain, ":")[1])
 	tempOrganization := cert.Subject.Organization                      // Optimized line
 	daysUntilExpiration := int(time.Until(cert.NotAfter).Hours() / 24) // Optimized line
-	isExpired := daysUntilExpiration < day
-	if isExpired {
-		status = 1
+
+	// Check if certificate is actually expired (current time > expiration time)
+	actuallyExpired := time.Now().After(cert.NotAfter)
+
+	// Check if certificate will expire within the specified days
+	willExpireSoon := daysUntilExpiration < day
+
+	// Set status based on expiration state
+	if actuallyExpired {
+		status = constants.CertStatusExpired
+	} else if willExpireSoon {
+		status = constants.CertStatusExpired // Warning: will expire soon
 	}
 
 	// if certifcate time gonna expire in 30 days add to logs
-	return isExpired, &models.Log{
+	return willExpireSoon, &models.Log{
 		Version:            cert.Version,
 		SerialNumber:       cert.SerialNumber.String(),
 		Subject:            cert.Subject.String(),
@@ -180,7 +189,7 @@ func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
 		AuthorityKeyID:     hex.EncodeToString(cert.AuthorityKeyId),
 		IsCA:               cert.IsCA,
 		Issuer:             cert.Issuer.CommonName,
-		IsExpired:          cert.NotAfter.Before(cert.NotBefore),
+		IsExpired:          actuallyExpired,
 		Message:            fmt.Sprintf("Certificate will expire in %d days.", daysUntilExpiration),
 		Status:             status,
 	}
@@ -205,25 +214,20 @@ func DecodeCertificateData(certData string) (*x509.Certificate, error) {
 
 // Excel File Creation Function
 func SetChangesToExcel(changes []models.Log) *excelize.File {
-
 	// Create a new spreadsheet
 	f := excelize.NewFile()
-	defer func() {
-		if err := f.Close(); err != nil {
-			logger.CLogger.Error("ERROR: ", err)
-		}
-	}()
 
 	// Expire Style
 	styleExpire, errExpire := f.NewStyle(&excelize.Style{
 		Fill: excelize.Fill{
 			Type:    "pattern",
-			Color:   []string{"#FF0000"},
+			Color:   []string{constants.ExcelColorRed},
 			Pattern: 1,
 		},
 	})
 	if errExpire != nil {
 		logger.CLogger.Error("ERROR: ", errExpire)
+		f.Close()
 		return nil
 	}
 
@@ -231,12 +235,13 @@ func SetChangesToExcel(changes []models.Log) *excelize.File {
 	styleNotExpire, errNotExpire := f.NewStyle(&excelize.Style{
 		Fill: excelize.Fill{
 			Type:    "pattern",
-			Color:   []string{"#00FF00"},
+			Color:   []string{constants.ExcelColorGreen},
 			Pattern: 1,
 		},
 	})
 	if errNotExpire != nil {
 		logger.CLogger.Error("ERROR: ", errNotExpire)
+		f.Close()
 		return nil
 	}
 
@@ -244,74 +249,76 @@ func SetChangesToExcel(changes []models.Log) *excelize.File {
 	styleTimeOut, errTimeOut := f.NewStyle(&excelize.Style{
 		Fill: excelize.Fill{
 			Type:    "pattern",
-			Color:   []string{"#FFFF00"},
+			Color:   []string{constants.ExcelColorYellow},
 			Pattern: 1,
 		},
 	})
 	if errTimeOut != nil {
 		logger.CLogger.Error("ERROR: ", errTimeOut)
+		f.Close()
 		return nil
 	}
 
 	// Change the name of the worksheet.
 	f.SetSheetName("Sheet1", "Logs")
 
-	f.SetCellValue("Logs", "A1", "Version")
-	f.SetCellValue("Logs", "B1", "Serial Number")
-	f.SetCellValue("Logs", "C1", "Subject")
-	f.SetCellValue("Logs", "D1", "Issuer Subject")
-	f.SetCellValue("Logs", "E1", "Domain")
-	f.SetCellValue("Logs", "F1", "Port")
-	f.SetCellValue("Logs", "G1", "Common Name")
-	f.SetCellValue("Logs", "H1", "Organization")
-	f.SetCellValue("Logs", "I1", "Issued On")
-	f.SetCellValue("Logs", "J1", "Expires On")
-	f.SetCellValue("Logs", "K1", "Certificate Data")
-	f.SetCellValue("Logs", "L1", "Signature Algorithm")
-	f.SetCellValue("Logs", "M1", "Subject Key ID")
-	f.SetCellValue("Logs", "N1", "Authority Key ID")
-	f.SetCellValue("Logs", "O1", "Is CA")
-	f.SetCellValue("Logs", "P1", "Issuer")
-	f.SetCellValue("Logs", "Q1", "Is Expired")
-	f.SetCellValue("Logs", "R1", "Message")
-
-	// Set value of a cell.
-	index := 2
-	for _, change := range changes {
-		f.SetCellValue("Logs", "A"+strconv.Itoa(index), change.Version)
-		f.SetCellValue("Logs", "B"+strconv.Itoa(index), change.SerialNumber)
-		f.SetCellValue("Logs", "C"+strconv.Itoa(index), change.Subject)
-		f.SetCellValue("Logs", "D"+strconv.Itoa(index), change.IssuerSubject)
-		f.SetCellValue("Logs", "E"+strconv.Itoa(index), change.Domain)
-		f.SetCellValue("Logs", "F"+strconv.Itoa(index), change.Port)
-		f.SetCellValue("Logs", "G"+strconv.Itoa(index), change.CommonName)
-		f.SetCellValue("Logs", "H"+strconv.Itoa(index), change.Organization)
-		f.SetCellValue("Logs", "I"+strconv.Itoa(index), change.IssuedOn)
-		f.SetCellValue("Logs", "J"+strconv.Itoa(index), change.ExpiresOn)
-		f.SetCellValue("Logs", "K"+strconv.Itoa(index), change.CertificateData)
-		f.SetCellValue("Logs", "L"+strconv.Itoa(index), change.SignatureAlgorithm)
-		f.SetCellValue("Logs", "M"+strconv.Itoa(index), change.SubjectKeyID)
-		f.SetCellValue("Logs", "N"+strconv.Itoa(index), change.AuthorityKeyID)
-		f.SetCellValue("Logs", "O"+strconv.Itoa(index), change.IsCA)
-		f.SetCellValue("Logs", "P"+strconv.Itoa(index), change.Issuer)
-		f.SetCellValue("Logs", "Q"+strconv.Itoa(index), change.IsExpired)
-		f.SetCellValue("Logs", "R"+strconv.Itoa(index), change.Message)
-		if change.Status == 1 {
-			f.SetCellStyle("Logs", "A"+strconv.Itoa(index), "R"+strconv.Itoa(index), styleExpire)
-		} else if change.Status == 0 {
-			f.SetCellStyle("Logs", "A"+strconv.Itoa(index), "R"+strconv.Itoa(index), styleNotExpire)
-		} else {
-			f.SetCellStyle("Logs", "A"+strconv.Itoa(index), "R"+strconv.Itoa(index), styleTimeOut)
-		}
-		index++
+	// Set headers
+	headers := []string{
+		"Version", "Serial Number", "Subject", "Issuer Subject", "Domain",
+		"Port", "Common Name", "Organization", "Issued On", "Expires On",
+		"Certificate Data", "Signature Algorithm", "Subject Key ID",
+		"Authority Key ID", "Is CA", "Issuer", "Is Expired", "Message",
 	}
 
-	// Set active sheet of the workbook.
-	f.SetActiveSheet(index)
+	for i, header := range headers {
+		col := string(rune('A' + i))
+		f.SetCellValue("Logs", col+"1", header)
+	}
 
-	// Save spreadsheet to the db
+	// Set value of cells - optimized with batch operations
+	for index, change := range changes {
+		row := strconv.Itoa(index + 2)
+
+		// Set all values for the row
+		f.SetCellValue("Logs", "A"+row, change.Version)
+		f.SetCellValue("Logs", "B"+row, change.SerialNumber)
+		f.SetCellValue("Logs", "C"+row, change.Subject)
+		f.SetCellValue("Logs", "D"+row, change.IssuerSubject)
+		f.SetCellValue("Logs", "E"+row, change.Domain)
+		f.SetCellValue("Logs", "F"+row, change.Port)
+		f.SetCellValue("Logs", "G"+row, change.CommonName)
+		f.SetCellValue("Logs", "H"+row, change.Organization)
+		f.SetCellValue("Logs", "I"+row, change.IssuedOn)
+		f.SetCellValue("Logs", "J"+row, change.ExpiresOn)
+		f.SetCellValue("Logs", "K"+row, change.CertificateData)
+		f.SetCellValue("Logs", "L"+row, change.SignatureAlgorithm)
+		f.SetCellValue("Logs", "M"+row, change.SubjectKeyID)
+		f.SetCellValue("Logs", "N"+row, change.AuthorityKeyID)
+		f.SetCellValue("Logs", "O"+row, change.IsCA)
+		f.SetCellValue("Logs", "P"+row, change.Issuer)
+		f.SetCellValue("Logs", "Q"+row, change.IsExpired)
+		f.SetCellValue("Logs", "R"+row, change.Message)
+
+		// Apply style based on status
+		var style int
+		switch change.Status {
+		case constants.CertStatusExpired:
+			style = styleExpire
+		case constants.CertStatusNotExpired:
+			style = styleNotExpire
+		default:
+			style = styleTimeOut
+		}
+		f.SetCellStyle("Logs", "A"+row, "R"+row, style)
+	}
+
+	// Set active sheet
+	f.SetActiveSheet(0)
+
+	// Save spreadsheet
 	if err := f.SaveAs("Logs.xlsx"); err != nil {
 		logger.CLogger.Error("ERROR: ", err)
+		f.Close()
 		return nil
 	}
 
