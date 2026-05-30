@@ -79,16 +79,16 @@ func (bs *Sentinel) InitRouter(r *gin.Engine) {
 		respondJson(ctx, code, API_PREFIX+"/domains", data, err)
 	})
 
-	// Certificate information for a specific domain
-	v1.GET("/certificates/:domain", func(ctx *gin.Context) {
-		code, data, err := bs.GetCertificateInfo(ctx)
-		respondJson(ctx, code, API_PREFIX+"/certificates/:domain", data, err)
-	})
-
 	// Get all certificates from the utility/data.go file
 	v1.GET("/certificates/scan", func(ctx *gin.Context) {
 		code, data, err := bs.GetAllExpirations(ctx)
 		respondJson(ctx, code, API_PREFIX+"/certificates/scan", data, err)
+	})
+
+	// Certificate information for a specific domain
+	v1.GET("/certificates/check", func(ctx *gin.Context) {
+		code, data, err := bs.GetCertificateInfo(ctx)
+		respondJson(ctx, code, API_PREFIX+"/certificates/check", data, err)
 	})
 
 	// Health check

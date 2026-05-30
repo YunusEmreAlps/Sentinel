@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -93,6 +94,60 @@ func UrlToOptions(url string) (string, string, string, string, string, string) {
 	return protocol, username, password, host, port, db
 }
 
+// NormalizeDomain normalizes domain input to host:port format
+// Supports formats:
+//   - domain.com (adds default port 443)
+//   - domain.com:443 (uses as-is)
+//   - https://domain.com (parses URL, uses port 443)
+//   - http://domain.com:8080 (parses URL, uses specified port)
+//   - https://domain.com:8443 (parses URL, uses specified port)
+func NormalizeDomain(domain string) (string, error) {
+	if domain == "" {
+		return "", fmt.Errorf("domain cannot be empty")
+	}
+
+	// Trim spaces
+	domain = strings.TrimSpace(domain)
+
+	// Check if domain already has protocol
+	if strings.HasPrefix(domain, "http://") || strings.HasPrefix(domain, "https://") {
+		// Parse URL
+		parsedURL, err := url.Parse(domain)
+		if err != nil {
+			return "", fmt.Errorf("invalid URL format: %v", err)
+		}
+
+		host := parsedURL.Hostname()
+		port := parsedURL.Port()
+
+		// If port is not specified, use default based on scheme
+		if port == "" {
+			if parsedURL.Scheme == "https" {
+				port = "443"
+			} else {
+				port = "80"
+			}
+		}
+
+		return fmt.Sprintf("%s:%s", host, port), nil
+	}
+
+	// Check if domain already has port (format: domain:port)
+	if strings.Contains(domain, ":") {
+		// Validate that it has exactly one colon and port is numeric
+		parts := strings.Split(domain, ":")
+		if len(parts) == 2 {
+			if _, err := strconv.Atoi(parts[1]); err == nil {
+				// Valid domain:port format
+				return domain, nil
+			}
+		}
+	}
+
+	// No protocol, no port - add default HTTPS port
+	return fmt.Sprintf("%s:443", domain), nil
+}
+
 // Check Domain Certificate with context support
 func CheckDomainCertificate(domain string, day int) (bool, *models.Log) {
 	ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
@@ -108,13 +163,20 @@ func CheckDomainCertificateWithContext(ctx context.Context, domain string, day i
 		day = constants.DefaultExpireDays
 	}
 
+	// Normalize domain to host:port format
+	normalizedDomain, err := NormalizeDomain(domain)
+	if err != nil {
+		logger.CLogger.Error("Failed to normalize domain:", err)
+		return false, nil
+	}
+
 	// false: certificate will not expire in 30 days
 	// true: certificate will expire in 30 days
-	logger.CLogger.Info("INFO: Checking certificate for " + domain)
+	logger.CLogger.Info("INFO: Checking certificate for " + normalizedDomain)
 
 	// TCP connection to domain with context
 	var d net.Dialer
-	conn, err := d.DialContext(ctx, "tcp", domain)
+	conn, err := d.DialContext(ctx, "tcp", normalizedDomain)
 	if err != nil {
 		if netErr, ok := err.(*net.OpError); ok && netErr.Op == "dial" {
 			// DNS resolution error
@@ -135,7 +197,7 @@ func CheckDomainCertificateWithContext(ctx context.Context, domain string, day i
 	// TLS Handshake
 	// x509: certificate signed by unknown authority
 	tlsConn := tls.Client(conn, &tls.Config{
-		ServerName:         strings.Split(domain, ":")[0],
+		ServerName:         strings.Split(normalizedDomain, ":")[0],
 		InsecureSkipVerify: true,
 	})
 
@@ -154,7 +216,7 @@ func CheckDomainCertificateWithContext(ctx context.Context, domain string, day i
 	}
 
 	cert := state.PeerCertificates[0]
-	tempPort, _ := strconv.Atoi(strings.Split(domain, ":")[1])
+	tempPort, _ := strconv.Atoi(strings.Split(normalizedDomain, ":")[1])
 	tempOrganization := cert.Subject.Organization                      // Optimized line
 	daysUntilExpiration := int(time.Until(cert.NotAfter).Hours() / 24) // Optimized line
 
@@ -177,7 +239,7 @@ func CheckDomainCertificateWithContext(ctx context.Context, domain string, day i
 		SerialNumber:       cert.SerialNumber.String(),
 		Subject:            cert.Subject.String(),
 		IssuerSubject:      cert.Issuer.String(),
-		Domain:             strings.Split(domain, ":")[0],
+		Domain:             strings.Split(normalizedDomain, ":")[0],
 		Port:               tempPort,
 		CommonName:         cert.Subject.CommonName,
 		Organization:       ArrayToString(tempOrganization),

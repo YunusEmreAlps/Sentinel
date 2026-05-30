@@ -16,15 +16,15 @@ info:
   title: Sentinel API
   version: 1.0.0
 paths:
-  /certificates/{domain}:
+  /certificates/check:
     get:
       consumes:
       - application/json
       description: This endpoint checks the SSL/TLS certificate of a given domain
         and returns its details. Only one domain can be checked at a time.
       parameters:
-      - description: yunusemrealpu.netlify.app:443
-        in: path
+      - description: Domain
+        in: query
         name: domain
         required: true
         type: string
