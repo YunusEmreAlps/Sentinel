@@ -31,6 +31,7 @@ import (
 	"sentinel/pkg/db/postgres"
 	rediscfg "sentinel/pkg/db/redis"
 	"sentinel/pkg/logger"
+	"sentinel/pkg/utils"
 )
 
 // @title Sentinel API
@@ -74,6 +75,8 @@ func main() {
 	// If db is active, create db connection
 	if config.C.DB.Active {
 		dbConn = postgres.NewPostgresDB(config.C.DB.Url)
+		utils.GlobalDataService = utils.NewDataService(dbConn)
+		logger.CLogger.Info("GlobalDataService initialized with database connection")
 	}
 
 	jaegerCfgInstance := jaegercfg.Configuration{

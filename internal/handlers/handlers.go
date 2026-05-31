@@ -91,6 +91,35 @@ func (bs *Sentinel) InitRouter(r *gin.Engine) {
 		respondJson(ctx, code, API_PREFIX+"/certificates/check", data, err)
 	})
 
+	// Domain Management Routes (only active if DB is enabled)
+	domainManage := v1.Group("/domains/manage")
+	{
+		domainManage.GET("", func(ctx *gin.Context) {
+			code, data, err := bs.GetAllDomains(ctx)
+			respondJson(ctx, code, API_PREFIX+"/domains/manage", data, err)
+		})
+		domainManage.GET("/:id", func(ctx *gin.Context) {
+			code, data, err := bs.GetDomainByID(ctx)
+			respondJson(ctx, code, API_PREFIX+"/domains/manage/:id", data, err)
+		})
+		domainManage.POST("", func(ctx *gin.Context) {
+			code, data, err := bs.CreateDomain(ctx)
+			respondJson(ctx, code, API_PREFIX+"/domains/manage", data, err)
+		})
+		domainManage.PUT("/:id", func(ctx *gin.Context) {
+			code, data, err := bs.UpdateDomain(ctx)
+			respondJson(ctx, code, API_PREFIX+"/domains/manage/:id", data, err)
+		})
+		domainManage.DELETE("/:id", func(ctx *gin.Context) {
+			code, data, err := bs.DeleteDomain(ctx)
+			respondJson(ctx, code, API_PREFIX+"/domains/manage/:id", data, err)
+		})
+		domainManage.DELETE("/:id/hard", func(ctx *gin.Context) {
+			code, data, err := bs.HardDeleteDomain(ctx)
+			respondJson(ctx, code, API_PREFIX+"/domains/manage/:id/hard", data, err)
+		})
+	}
+
 	// Health check
 	health.GET("", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{

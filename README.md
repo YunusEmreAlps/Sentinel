@@ -121,59 +121,92 @@ docker-compose logs -f sentinel
 
 ### Directory Structure
 
-```text
-Sentinel/
-├── assets/                      # Project assets
-│   └── sentinel.png            # Logo and images
-├── config/                      # Configuration management
-│   ├── config.go               # Config loader with Viper
-│   └── sample.env.yaml         # Configuration template
-├── docs/                        # Auto-generated Swagger docs
-│   ├── docs.go
-│   ├── swagger.json
-│   └── swagger.yaml
-├── internal/                    # Private application code
-│   ├── handlers/               # HTTP request handlers
-│   │   ├── handlers.go         # Router initialization + CORS
-│   │   ├── list_certificates.go      # GET /certificates
-│   │   ├── get_certificate_info.go   # GET /certificates/:domain
-│   │   └── get_all_expirations.go    # GET /certificates/all
-│   └── models/                 # Data models
-│       ├── log.go              # Certificate log model
-│       └── mail.go             # Email notification model
-├── pkg/                         # Public reusable packages
-│   ├── constants/              # Application constants
-│   │   └── constants.go        # Timeouts, status codes, etc.
-│   ├── db/                     # Database connections
-│   │   ├── postgres/           # PostgreSQL with connection pool
-│   │   │   └── db_conn.go      # 60 max, 30 idle connections
-│   │   └── redis/              # Redis caching
-│   │       └── conn.go
-│   ├── logger/                 # Structured logging
-│   │   └── logger.go           # Logrus integration
-│   ├── mail/                   # Email service
-│   │   └── send_mail.go        # SMTP with Excel attachments
-│   ├── metric/                 # Prometheus metrics
-│   │   └── metric.go
-│   ├── parseHtml/              # Template rendering
-│   │   └── LogTemplate.go
-│   ├── templates/              # HTML email templates
-│   │   ├── log.html
-│   │   └── welcome.html
-│   └── utils/                  # Utility functions
-│       ├── cert_checker.go     # Concurrent worker pool
-│       ├── retry.go            # Retry logic with exponential backoff
-│       ├── helpers.go          # Certificate checking core
-│       ├── data.go             # Domain list configuration
-│       └── utils.go            # Helper functions
-├── Dockerfile                   # Container definition
-├── docker-compose.yml          # Multi-container setup
-├── go.mod                      # Go module dependencies
-├── go.sum                      # Dependency checksums
-├── main.go                     # Application entry point
-└── README.md                   # Documentation
-
 ```
+Sentinel/
+├── assets/                           # Static assets & images
+│   └── sentinel.png                  # Application logo
+│
+├── config/                           # Configuration management
+│   ├── config.go                     # Viper-based configuration loader
+│   ├── .env.yaml                     # Active configuration (gitignored)
+│   └── sample.env.yaml               # Configuration template
+│
+├── docs/                             # Auto-generated Swagger documentation
+│   ├── docs.go                       # Swagger Go definitions
+│   ├── swagger.json                  # OpenAPI JSON specification
+│   └── swagger.yaml                  # OpenAPI YAML specification
+│
+├── internal/                         # Private application code
+│   ├── handlers/                     # HTTP request handlers
+│   │   ├── handlers.go               # Router setup & middleware
+│   │   ├── domain_handler.go         # Domain CRUD operations (DB)
+│   │   ├── list_certificates.go      # GET /domains - List domains
+│   │   ├── get_certificate_info.go   # GET /certificates/check - Single check
+│   │   └── get_all_expirations.go    # GET /certificates/scan - Bulk scan
+│   │
+│   ├── models/                       # Data models & DTOs
+│   │   ├── domain.go                 # Domain entity (GORM model)
+│   │   ├── log.go                    # Certificate log structure
+│   │   ├── mail.go                   # Email notification model
+│   │   └── response.go               # Standard API response wrapper
+│   │
+│   └── repository/                   # Data access layer
+│       └── domain_repository.go      # Domain database operations
+│
+├── migrations/                       # Database migration scripts
+│   └── (SQL migration files)
+│
+├── pkg/                              # Public reusable packages
+│   ├── constants/                    # Application-wide constants
+│   │   └── constants.go              # Timeouts, status codes, Excel colors
+│   │
+│   ├── db/                           # Database connection management
+│   │   ├── postgres/                 # PostgreSQL integration
+│   │   │   └── db_conn.go            # Connection pool (60 max, 30 idle)
+│   │   └── redis/                    # Redis caching
+│   │       └── conn.go               # Redis client & in-memory store
+│   │
+│   ├── logger/                       # Structured logging
+│   │   └── logger.go                 # Zap-based logger implementation
+│   │
+│   ├── mail/                         # Email notification service
+│   │   └── send_mail.go              # SMTP client with Excel attachments
+│   │
+│   ├── metric/                       # Prometheus metrics
+│   │   └── metric.go                 # Custom metrics collection
+│   │
+│   ├── parseHtml/                    # HTML template rendering
+│   │   └── LogTemplate.go            # Email template parser
+│   │
+│   ├── templates/                    # HTML email templates
+│   │   ├── log.html                  # Certificate expiration report
+│   │   └── welcome.html              # Welcome email template
+│   │
+│   └── utils/                        # Utility functions
+│       ├── cert_checker.go           # Concurrent worker pool for certs
+│       ├── data_service.go           # Data abstraction (DB/static)
+│       ├── data.go                   # Static domain list fallback
+│       ├── helpers.go                # Certificate validation logic
+│       ├── retry.go                  # Exponential backoff retry
+│       └── utils.go                  # General helper functions
+│
+├── docker-compose.yml                # Multi-container orchestration
+├── Dockerfile                        # Application container definition
+├── go.mod                            # Go module dependencies
+├── go.sum                            # Dependency lock file
+├── main.go                           # Application entry point
+└── README.md                         # Project documentation
+```
+
+**Key Directories Explained:**
+
+| Directory | Purpose | Key Features |
+|-----------|---------|--------------|
+| `internal/` | Private code, not importable by other projects | Handlers, models, repositories |
+| `pkg/` | Public packages, reusable across projects | Utils, DB, logging, metrics |
+| `config/` | Configuration files and loaders | Viper-based, YAML support |
+| `docs/` | API documentation | Auto-generated by Swag |
+| `migrations/` | Database schema changes | SQL migration scripts |
 
 ## API Documentation
 
@@ -190,6 +223,8 @@ Sentinel provides comprehensive API documentation through Swagger/OpenAPI specif
 - **GET `/domains`**: List all monitored domains
 - **GET `/certificates/scan`**: Get certificates approaching expiration
 - **GET `/certificates/{domain}`**: Get certificate information for a specific domain
+
+> If DB is active, the `/domains` endpoint will return the list of domains from the database. If DB is not active, it will return a static list of domains defined in `pkg/utils/data.go`.
 
 ### Example API Response
 
@@ -222,8 +257,6 @@ Sentinel provides comprehensive API documentation through Swagger/OpenAPI specif
   ]
 }
 ```
-
-<!-- Image List -->
 
 ![Swagger 1](assets/1.png)
 ![Swagger 2](assets/2.png)

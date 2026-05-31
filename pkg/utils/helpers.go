@@ -389,11 +389,22 @@ func SetChangesToExcel(changes []models.Log) *excelize.File {
 }
 
 func SendMailWithAttachment(logs []models.Log, f *excelize.File) {
+	// Check if mail is properly configured
+	if config.C.Mail.Host == "" || config.C.Mail.Host == "HOST" {
+		logger.CLogger.Warn("Mail is not configured - skipping email notification")
+		return
+	}
+
+	// Get recipients from DataService (DB or static data based on config)
+	toUsers := ToUsers
+	ccUsers := CCUsers
+	bccUsers := []string{}
+
 	mailContent := &models.Mail{
 		Sender:  config.C.Mail.FromMail,
-		To:      ToUsers,
-		Cc:      CCUsers,
-		Bcc:     []string{},
+		To:      toUsers,
+		Cc:      ccUsers,
+		Bcc:     bccUsers,
 		Subject: config.C.App.Name + " Error Logs",
 	}
 

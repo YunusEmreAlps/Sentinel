@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"strings"
-	"time"
 	"sentinel/config"
 	"sentinel/internal/models"
 	"sentinel/pkg/logger"
+	"strings"
+	"time"
 )
 
 func LogTemplate(content *models.Mail, logs []models.Log, l string) string {
@@ -24,7 +24,7 @@ func LogTemplate(content *models.Mail, logs []models.Log, l string) string {
 		templateBuffer.WriteString(fmt.Sprintf("Subject: %s\r\n", content.Subject))
 	}
 
-	t, err := template.ParseFiles("./templates/log.html")
+	t, err := template.ParseFiles("./pkg/templates/log.html")
 	if err != nil {
 		logger.CLogger.Error("ERROR: ", err)
 		return ""

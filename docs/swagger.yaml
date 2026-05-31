@@ -8,6 +8,22 @@ definitions:
       success:
         type: boolean
     type: object
+  models.Domain:
+    properties:
+      active:
+        type: boolean
+      created_at:
+        type: string
+      domain:
+        description: 'Supports all formats: google.com, https://example.com, domain.com:443'
+        type: string
+      id:
+        type: integer
+      updated_at:
+        type: string
+    required:
+    - domain
+    type: object
 info:
   contact:
     email: YunusAlpu@icloud.com
@@ -116,6 +132,221 @@ paths:
       summary: Display domain list
       tags:
       - Certificates
+  /domains/manage:
+    get:
+      consumes:
+      - application/json
+      description: Returns all active domains from database (only works if DB is active)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of domains successfully retrieved
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "403":
+          description: Database is not active
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Failed to retrieve domains
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all domains from database
+      tags:
+      - Domain Management
+    post:
+      consumes:
+      - application/json
+      description: 'Add a new domain to monitor (only works if DB is active). Supports
+        formats: google.com, https://example.com, domain.com:443'
+      parameters:
+      - description: Domain object
+        in: body
+        name: domain
+        required: true
+        schema:
+          $ref: '#/definitions/models.Domain'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Domain successfully created
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "403":
+          description: Database is not active
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Failed to create domain
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new domain
+      tags:
+      - Domain Management
+  /domains/manage/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a domain by setting active to false (only works if
+        DB is active)
+      parameters:
+      - description: Domain ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Domain successfully deleted
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "400":
+          description: Invalid domain ID
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "403":
+          description: Database is not active
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Failed to delete domain
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a domain (soft delete)
+      tags:
+      - Domain Management
+    get:
+      consumes:
+      - application/json
+      description: Returns a specific domain by ID (only works if DB is active)
+      parameters:
+      - description: Domain ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Domain successfully retrieved
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "400":
+          description: Invalid domain ID
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "403":
+          description: Database is not active
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "404":
+          description: Domain not found
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Failed to retrieve domain
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get domain by ID
+      tags:
+      - Domain Management
+    put:
+      consumes:
+      - application/json
+      description: Update an existing domain (only works if DB is active)
+      parameters:
+      - description: Domain ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Domain object
+        in: body
+        name: domain
+        required: true
+        schema:
+          $ref: '#/definitions/models.Domain'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Domain successfully updated
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "403":
+          description: Database is not active
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "404":
+          description: Domain not found
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Failed to update domain
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a domain
+      tags:
+      - Domain Management
+  /domains/manage/{id}/hard:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently delete a domain from database (only works if DB is
+        active)
+      parameters:
+      - description: Domain ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Domain permanently deleted
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "400":
+          description: Invalid domain ID
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "403":
+          description: Database is not active
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+        "500":
+          description: Failed to delete domain
+          schema:
+            $ref: '#/definitions/models.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Hard delete a domain
+      tags:
+      - Domain Management
 schemes:
 - http
 - https
